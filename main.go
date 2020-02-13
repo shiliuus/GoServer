@@ -7,42 +7,42 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"strconv"
 )
 
+var headerMap = map[string]string {"Content-Type": "application/json"}
+
+func constructResponse(httpResponseWriter http.ResponseWriter, headerMap map[string]string, statusCode int, content []byte) {
+	for key, val := range headerMap {
+		httpResponseWriter.Header().Set(key, val)
+	}
+	httpResponseWriter.WriteHeader(statusCode)
+	httpResponseWriter.Write(content)
+}
+
 func get(httpResponseWriter http.ResponseWriter, request *http.Request) {
-	httpResponseWriter.Header().Set("Content-Type", "application/json")
-	httpResponseWriter.WriteHeader(http.StatusOK)
-	httpResponseWriter.Write([]byte(`{"message": "get called"}`))
+	constructResponse(httpResponseWriter, headerMap, http.StatusOK, []byte(`{"message": "get called"}`))
 }
 
 func post(httpResponseWriter http.ResponseWriter, request *http.Request) {
-	httpResponseWriter.Header().Set("Content-Type", "application/json")
-	httpResponseWriter.WriteHeader(http.StatusCreated)
-	httpResponseWriter.Write([]byte(`{"message": "post called"}`))
+	constructResponse(httpResponseWriter, headerMap, http.StatusCreated, []byte(`{"message": "post called"}`))
 }
 
 func put(httpResponseWriter http.ResponseWriter, request *http.Request) {
-	httpResponseWriter.Header().Set("Content-Type", "application/json")
-	httpResponseWriter.WriteHeader(http.StatusAccepted)
-	httpResponseWriter.Write([]byte(`{"message": "put called"}`))
+	constructResponse(httpResponseWriter, headerMap, http.StatusAccepted, []byte(`{"message": "put called"}`))
 }
 
 func delete(httpResponseWriter http.ResponseWriter, request *http.Request) {
-	httpResponseWriter.Header().Set("Content-Type", "application/json")
-	httpResponseWriter.WriteHeader(http.StatusOK)
-	httpResponseWriter.Write([]byte(`{"message": "delete called"}`))
+	constructResponse(httpResponseWriter, headerMap, http.StatusOK, []byte(`{"message": "delete called"}`))
 }
 
 func notFound(httpResponseWriter http.ResponseWriter, request *http.Request) {
-	httpResponseWriter.Header().Set("Content-Type", "application/json")
-	httpResponseWriter.WriteHeader(http.StatusNotFound)
-	httpResponseWriter.Write([]byte(`{"message": "not found"}`))
+	constructResponse(httpResponseWriter, headerMap, http.StatusNotFound, []byte(`{"message": "not found"}`))
 }
 
 func params(httpResponseWriter http.ResponseWriter, request *http.Request) {
 	pathParams := mux.Vars(request)
 	httpResponseWriter.Header().Set("Content-Type", "application/json")
+	httpResponseWriter.WriteHeader(http.StatusOK)
 
 	if _, ok := pathParams["keyword"]; ok {
 		c := newsapi.NewClient("6c5c888290f647818122022f271a88f0", newsapi.WithHTTPClient(http.DefaultClient))
@@ -50,6 +50,7 @@ func params(httpResponseWriter http.ResponseWriter, request *http.Request) {
 		sources, err := c.GetSources(context.Background(), nil)
 
 		if err != nil {
+			constructResponse(httpResponseWriter, headerMap, http.StatusInternalServerError, []byte(`{"message": "something is wrong"}`))
 			panic(err)
 		}
 
@@ -57,28 +58,6 @@ func params(httpResponseWriter http.ResponseWriter, request *http.Request) {
 			httpResponseWriter.Write([]byte(fmt.Sprintf(s.Description)))
 		}
 	}
-
-	userID := -1
-	var err error
-	if val, ok := pathParams["userID"]; ok {
-		userID, err = strconv.Atoi(val)
-		if err != nil {
-			httpResponseWriter.WriteHeader(http.StatusInternalServerError)
-			httpResponseWriter.Write([]byte(`{"message": "need a number"}`))
-			return
-		}
-	}
-
-	commentID := -1
-	if val, ok := pathParams["commontID"]; ok {
-		commentID, err = strconv.Atoi(val)
-		if err != nil {
-			httpResponseWriter.WriteHeader(http.StatusInternalServerError)
-			httpResponseWriter.Write([]byte(`{"message": "need a number"}`))
-			return
-		}
-	}
-	httpResponseWriter.Write([]byte(fmt.Sprintf(`{"userID": %d, "commentID": %d}`, userID, commentID)))
 }
 
 func main() {
