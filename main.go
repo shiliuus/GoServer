@@ -2,14 +2,34 @@ package main
 
 import (
 	"context"
-	"fmt"
+	json2 "encoding/json"
 	"github.com/GoServer/newsapi"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
-var headerMap = map[string]string {"Content-Type": "application/json"}
+const (
+	key_q              = "q"
+	key_qInTitle       = "qInTitle"
+	key_category       = "category"
+	key_country        = "country"
+	key_sources        = "sources"
+	key_domains        = "domains"
+	key_excludeDomains = "excludeDomains"
+	key_from           = "from"
+	key_to             = "to"
+	key_language       = "language"
+	key_sortBy         = "sortBy"
+	key_pageSize       = "pageSize"
+	key_page           = "page"
+
+	INT_MAX = int(^uint(0) >> 1)
+)
+
+var headerMap = map[string]string{"Content-Type": "application/json"}
 
 func constructResponse(httpResponseWriter http.ResponseWriter, headerMap map[string]string, statusCode int, content []byte) {
 	for key, val := range headerMap {
@@ -39,25 +59,159 @@ func notFound(httpResponseWriter http.ResponseWriter, request *http.Request) {
 	constructResponse(httpResponseWriter, headerMap, http.StatusNotFound, []byte(`{"message": "not found"}`))
 }
 
-func params(httpResponseWriter http.ResponseWriter, request *http.Request) {
-	pathParams := mux.Vars(request)
-	httpResponseWriter.Header().Set("Content-Type", "application/json")
-	httpResponseWriter.WriteHeader(http.StatusOK)
+func trendingParams(httpResponseWriter http.ResponseWriter, request *http.Request) {
+	setUpHttpResponseHeader(httpResponseWriter)
+	c := newsapi.NewClient("6c5c888290f647818122022f271a88f0", newsapi.WithHTTPClient(http.DefaultClient))
 
-	if _, ok := pathParams["keyword"]; ok {
-		c := newsapi.NewClient("6c5c888290f647818122022f271a88f0", newsapi.WithHTTPClient(http.DefaultClient))
+	queryParams := request.URL.Query()
+	topHeadlineParams := newsapi.TopHeadlineParameters{}
+	countries, ok := queryParams[key_country]
+	if ok && len(countries) > 0 {
+		topHeadlineParams.Country = countries[0]
+	}
 
-		sources, err := c.GetSources(context.Background(), nil)
+	categories, ok := queryParams[key_category]
+	if ok && len(categories) > 0 {
+		topHeadlineParams.Category = categories[0]
+	}
 
+	sourcesStr, ok := queryParams[key_sources]
+	if ok && len(sourcesStr) > 0 {
+		topHeadlineParams.Sources = strings.Split(sourcesStr[0], ",")
+	}
+
+	queries, ok := queryParams[key_q]
+	if ok && len(queries) > 0 {
+		topHeadlineParams.Keywords = queries[0]
+	}
+
+	pageSizes, ok := queryParams[key_pageSize]
+	if ok && len(pageSizes) > 0 {
+		pageSize, err := strconv.Atoi(pageSizes[0])
 		if err != nil {
-			constructResponse(httpResponseWriter, headerMap, http.StatusInternalServerError, []byte(`{"message": "something is wrong"}`))
-			panic(err)
-		}
-
-		for _, s := range sources.Sources {
-			httpResponseWriter.Write([]byte(fmt.Sprintf(s.Description)))
+			topHeadlineParams.PageSize = pageSize
 		}
 	}
+
+	pages, ok := queryParams[key_page]
+	if ok && len(pages) > 0 {
+		page, err := strconv.Atoi(pages[0])
+		if err != nil {
+			topHeadlineParams.Page = page
+		}
+	}
+
+	articles, err := c.GetTopHeadlines(context.Background(), &topHeadlineParams)
+	handleApiError(err, httpResponseWriter)
+	response, err := json2.Marshal(articles)
+	handleJsonResponse(response, err, httpResponseWriter)
+}
+
+func searchParams(httpResponseWriter http.ResponseWriter, request *http.Request) {
+	setUpHttpResponseHeader(httpResponseWriter)
+	c := newsapi.NewClient("6c5c888290f647818122022f271a88f0", newsapi.WithHTTPClient(http.DefaultClient))
+
+	queryParams := request.URL.Query()
+	searchParams := newsapi.EverythingParameters{}
+	qs, ok := queryParams[key_q]
+	if ok && len(qs) > 0 {
+		searchParams.Keywords = qs[0]
+	}
+
+	qsInTitle, ok := queryParams[key_qInTitle]
+	if ok && len(qsInTitle) > 0 {
+		searchParams.KeywordsInTitle = qsInTitle[0]
+	}
+
+	sourcesStr, ok := queryParams[key_sources]
+	if ok && len(sourcesStr) > 0 {
+		searchParams.Sources = strings.Split(sourcesStr[0], ",")
+	}
+
+	languages, ok := queryParams[key_language]
+	if ok && len(languages) > 0 {
+		searchParams.Language = languages[0]
+	}
+
+	sortBys, ok := queryParams[key_sortBy]
+	if ok && len(sortBys) > 0 {
+		searchParams.SortBy = sortBys[0]
+	} else {
+		searchParams.SortBy = "publishedAt"
+	}
+
+	pageSizes, ok := queryParams[key_pageSize]
+	if ok && len(pageSizes) > 0 {
+		pageSize, err := strconv.Atoi(pageSizes[0])
+		if err != nil {
+			searchParams.PageSize = pageSize
+		}
+	}
+
+	pages, ok := queryParams[key_page]
+	if ok && len(pages) > 0 {
+		page, err := strconv.Atoi(pages[0])
+		if err != nil {
+			searchParams.Page = page
+		}
+	}
+
+	articles, err := c.GetEverything(context.Background(), &searchParams)
+	handleApiError(err, httpResponseWriter)
+	response, err := json2.Marshal(articles)
+	handleJsonResponse(response, err, httpResponseWriter)
+}
+
+func sourcesParams(httpResponseWriter http.ResponseWriter, request *http.Request) {
+	setUpHttpResponseHeader(httpResponseWriter)
+	c := newsapi.NewClient("6c5c888290f647818122022f271a88f0", newsapi.WithHTTPClient(http.DefaultClient))
+
+	queryParams := request.URL.Query()
+	sourcesParams := newsapi.SourceParameters{}
+	countries, ok := queryParams[key_country]
+	if ok && len(countries) > 0 {
+		sourcesParams.Country = countries[0]
+	}
+
+	categories, ok := queryParams[key_category]
+	if ok && len(categories) > 0 {
+		sourcesParams.Category = categories[0]
+	}
+
+	languages, ok := queryParams[key_language]
+	if ok && len(languages) > 0 {
+		sourcesParams.Language = languages[0]
+	}
+
+	sources, err := c.GetSources(context.Background(), &sourcesParams)
+	handleApiError(err, httpResponseWriter)
+	response, err := json2.Marshal(sources)
+	handleJsonResponse(response, err, httpResponseWriter)
+}
+
+func setUpHttpResponseHeader(httpResponseWriter http.ResponseWriter) {
+	httpResponseWriter.Header().Set("Content-Type", "application/json")
+	httpResponseWriter.WriteHeader(http.StatusOK)
+}
+
+func handleApiError(err error, httpResponseWriter http.ResponseWriter) {
+	if err != nil {
+		if newsapi.ApiError(err) {
+			errContent, err := json2.Marshal(err.(*newsapi.Error))
+			handleJsonResponse(errContent, err, httpResponseWriter)
+		} else {
+			constructResponse(httpResponseWriter, headerMap, http.StatusInternalServerError, []byte(`{"message": "something is wrong"}`))
+		}
+		return
+	}
+}
+
+func handleJsonResponse(response []byte, err error, httpResponseWriter http.ResponseWriter) {
+	if err != nil {
+		http.Error(httpResponseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httpResponseWriter.Write(response)
 }
 
 func main() {
@@ -69,8 +223,9 @@ func main() {
 	apiTest.HandleFunc("", put).Methods(http.MethodPut)
 	apiTest.HandleFunc("", delete).Methods(http.MethodDelete)
 
-	api := request.PathPrefix("/newsapi").Subrouter()
-	api.HandleFunc("/user/{userID}/comment/{commentID}", params).Methods(http.MethodGet)
-	api.HandleFunc("/keyword={keyword}", params).Methods(http.MethodGet)
+	api := request.PathPrefix("/api/news").Subrouter()
+	api.HandleFunc("/trending", trendingParams).Methods(http.MethodGet)
+	api.HandleFunc("/search", searchParams).Methods(http.MethodGet)
+	api.HandleFunc("/sources", sourcesParams).Methods(http.MethodGet)
 	log.Fatal(http.ListenAndServe(":8765", request))
 }

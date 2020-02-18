@@ -40,6 +40,13 @@ type Source struct {
 	} `json:"urlsToLogos"`
 }
 
+// SourceParameters are the parameters which can be used in the source request to newsapi
+type SourceParameters struct {
+	Category string `url:"category,omitempty"`
+	Language string `url:"language,omitempty"`
+	Country  string `url:"country,omitempty"`
+}
+
 // TopHeadlineParameters are the parameters which can be used to tweak to request for the top headlines.
 type TopHeadlineParameters struct {
 	Country  string   `url:"country,omitempty"`
@@ -52,10 +59,11 @@ type TopHeadlineParameters struct {
 
 // EverythingParameters are the parameters used for the newsapi everything endpoint.
 type EverythingParameters struct {
-	Keywords       string   `url:"q,omitempty"`
-	Sources        []string `url:"sources,omitempty,comma"`
-	Domains        []string `url:"domains,omitempty,comma"`
-	ExcludeDomains []string `url:"excludeDomains,omitempty"`
+	Keywords        string   `url:"q,omitempty"`
+	KeywordsInTitle string   `url:"qInTitle,omitempty"`
+	Sources         []string `url:"sources,omitempty,comma"`
+	Domains         []string `url:"domains,omitempty,comma"`
+	ExcludeDomains  []string `url:"excludeDomains,omitempty"`
 
 	From time.Time `url:"from,omitempty"`
 	To   time.Time `url:"to,omitempty"`

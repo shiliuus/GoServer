@@ -3,7 +3,7 @@ package newsapi
 import "context"
 
 // GetSources returns the sources from newsapi see http://newsapi.org/docs for more information on the parameters
-func (client *Client) GetSources(ctx context.Context, params *UrlParams) (*SourceResponse, error) {
+func (client *Client) GetSources(ctx context.Context, params *SourceParameters) (*SourceResponse, error) {
 	u := sourcesEndpoint
 
 	if params != nil {
