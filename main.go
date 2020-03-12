@@ -2,14 +2,26 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	json2 "encoding/json"
+	"fmt"
+	"io/ioutil"
+
+	//"fmt"
 	"github.com/GoServer/newsapi"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/acme/autocert"
+
+	//firebase "firebase.google.com/go"
+	//"google.golang.org/api/option"
 )
+
+
 
 const (
 	key_q              = "q"
@@ -214,7 +226,23 @@ func handleJsonResponse(response []byte, err error, httpResponseWriter http.Resp
 	httpResponseWriter.Write(response)
 }
 
+func postHealthDataParams(w http.ResponseWriter, r *http.Request) {
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s", reqBody)
+}
+
 func main() {
+	// FCM push notification
+	//opt := option.WithCredentialsFile("github.com/GoServer/instant-news-7840b-firebase-adminsdk-d7ns0-aa18d49621.json")
+	//app, err := firebase.NewApp(context.Background(), nil, opt)
+	//if err != nil {
+	//	log.Fatalf("error initializing app: %v\n", err)
+	//}
+	
+
 	request := mux.NewRouter()
 
 	apiTest := request.PathPrefix("/api/test").Subrouter()
@@ -223,9 +251,14 @@ func main() {
 	apiTest.HandleFunc("", put).Methods(http.MethodPut)
 	apiTest.HandleFunc("", delete).Methods(http.MethodDelete)
 
-	api := request.PathPrefix("/api/news").Subrouter()
-	api.HandleFunc("/trending", trendingParams).Methods(http.MethodGet)
-	api.HandleFunc("/search", searchParams).Methods(http.MethodGet)
-	api.HandleFunc("/sources", sourcesParams).Methods(http.MethodGet)
-	log.Fatal(http.ListenAndServe(":8765", request))
+	newsApi := request.PathPrefix("/api/news").Subrouter()
+	newsApi.HandleFunc("/top-headlines", trendingParams).Methods(http.MethodGet)
+	newsApi.HandleFunc("/everything", searchParams).Methods(http.MethodGet)
+	newsApi.HandleFunc("/sources", sourcesParams).Methods(http.MethodGet)
+
+	psApi := request.PathPrefix("/api/ps").Subrouter()
+	psApi.HandleFunc("/healthData", postHealthDataParams).Methods(http.MethodPost)
+
+	log.Fatal(http.ListenAndServeTLS(":8765", "cert.pem", "key.pem", request))
+	//log.Fatal(http.ListenAndServe(":8765", request))
 }
