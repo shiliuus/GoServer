@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	json2 "encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,8 +13,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"golang.org/x/crypto/acme/autocert"
 
 	//firebase "firebase.google.com/go"
 	//"google.golang.org/api/option"
@@ -259,6 +256,6 @@ func main() {
 	psApi := request.PathPrefix("/api/ps").Subrouter()
 	psApi.HandleFunc("/healthData", postHealthDataParams).Methods(http.MethodPost)
 
-	log.Fatal(http.ListenAndServeTLS(":8765", "cert.pem", "key.pem", request))
-	//log.Fatal(http.ListenAndServe(":8765", request))
+	log.Fatal(http.ListenAndServeTLS(":8080", "cert.pem", "key.pem", request))
+	//log.Fatal(http.ListenAndServe(":8080", request))
 }
