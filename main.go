@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	json2 "encoding/json"
+	firebase "firebase.google.com/go"
+	"firebase.google.com/go/messaging"
 	"fmt"
+	"google.golang.org/api/option"
 	"io/ioutil"
 
 	//"fmt"
@@ -13,9 +16,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	//firebase "firebase.google.com/go"
-	//"google.golang.org/api/option"
 )
 
 
@@ -228,18 +228,45 @@ func postHealthDataParams(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%s", reqBody)
+	// TODO read the dto,  and send the data to database
+	var healthData newsapi.HealthData
+	json2.Unmarshal([]byte(reqBody), &healthData)
+	fmt.Printf("Result: ", healthData)
+
+	// TODO send a push notification to tell
+	opt := option.WithCredentialsFile("instant-news-7840b-firebase-adminsdk-d7ns0-aa18d49621.json")
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
+	}
+
+	ctx := context.Background()
+	client, err := app.Messaging(ctx)
+	if err != nil {
+		log.Fatal("error getting Messaging client: %v\n", err)
+	}
+
+	registrationToken := healthData.Token
+
+	message := &messaging.Message{
+		Data: map[string]string {
+			"score" : "850",
+			"time" : "2:45",
+		},
+		Token: registrationToken,
+	}
+
+	response, err := client.Send(ctx, message)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Println("Successfully sent message:", response)
+
+	// TODO Send the data to database
 }
 
 func main() {
-	// FCM push notification
-	//opt := option.WithCredentialsFile("github.com/GoServer/instant-news-7840b-firebase-adminsdk-d7ns0-aa18d49621.json")
-	//app, err := firebase.NewApp(context.Background(), nil, opt)
-	//if err != nil {
-	//	log.Fatalf("error initializing app: %v\n", err)
-	//}
-	
-
 	request := mux.NewRouter()
 
 	apiTest := request.PathPrefix("/api/test").Subrouter()
@@ -256,6 +283,6 @@ func main() {
 	psApi := request.PathPrefix("/api/ps").Subrouter()
 	psApi.HandleFunc("/healthData", postHealthDataParams).Methods(http.MethodPost)
 
-	log.Fatal(http.ListenAndServeTLS(":8080", "cert.pem", "key.pem", request))
-	//log.Fatal(http.ListenAndServe(":8080", request))
+	log.Fatal(http.ListenAndServe(":8765", request))
+	//log.Fatal(http.ListenAndServeTLS(":8080", "cert.pem", "key.pem", request))
 }
