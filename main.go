@@ -234,7 +234,7 @@ func postHealthDataParams(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Result: ", healthData)
 
 	// TODO send a push notification to tell
-	opt := option.WithCredentialsFile("instant-news-7840b-firebase-adminsdk-d7ns0-aa18d49621.json")
+	opt := option.WithCredentialsFile("personal-science-firebase-adminsdk-56hl6-3a6fff79c1.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		log.Fatalf("error initializing app: %v\n", err)
