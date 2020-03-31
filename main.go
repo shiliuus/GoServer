@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"google.golang.org/api/option"
 	"io/ioutil"
+	"time"
 
 	//"fmt"
 	"github.com/GoServer/newsapi"
@@ -16,6 +17,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	//"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/jackc/pgx"
 )
 
 
@@ -36,6 +40,12 @@ const (
 	key_page           = "page"
 
 	INT_MAX = int(^uint(0) >> 1)
+
+	dbhost = "psdev.ctmxeolrv0ba.us-east-1.rds.amazonaws.com"
+	dbport = 5432
+	dbname = "glucosetracker"
+	dbuser = "glucosetracker"
+	dbpassword = "password001"
 )
 
 var headerMap = map[string]string{"Content-Type": "application/json"}
@@ -228,12 +238,12 @@ func postHealthDataParams(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// TODO read the dto,  and send the data to database
+	// read the dto,  and send the data to database
 	var healthData newsapi.HealthData
 	json2.Unmarshal([]byte(reqBody), &healthData)
 	fmt.Printf("Result: ", healthData)
 
-	// TODO send a push notification to tell
+	// send a push notification to tell
 	opt := option.WithCredentialsFile("personal-science-firebase-adminsdk-56hl6-3a6fff79c1.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
@@ -263,7 +273,29 @@ func postHealthDataParams(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Successfully sent message:", response)
 
-	// TODO Send the data to database
+	// Send the data to database
+	connConfig, err := pgx.ParseConfig("user=glucosetracker password=password001 host=psdev.ctmxeolrv0ba.us-east-1.rds.amazonaws.com port=5432 dbname=glucosetracker")
+
+	conn, err := pgx.ConnectConfig(context.Background(), connConfig)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer conn.Close(context.Background())
+
+	sqlcommand := "INSERT INTO public.metrics_metric_test (created, modified, start_datetime, stop_datetime, metric_type, value, source, user_entered, user_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);"
+	t := time.Now()
+	createAt := t.Format("2006-01-02 15:04:05")
+
+	for _, data := range healthData.FitDataList {
+		_, err2 := conn.Exec(context.Background(),
+			sqlcommand,
+			createAt, createAt, data.DateFrom, data.DateTo, data.Source, strconv.Itoa(data.Value), data.Source, data.UserEntered, 24)
+		if err2 != nil {
+			log.Fatalln(err2)
+		}
+		fmt.Printf("Successfully created user mwood\n")
+	}
+	
 }
 
 func main() {
