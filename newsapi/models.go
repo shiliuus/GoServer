@@ -102,3 +102,16 @@ type Error struct {
 	Code    string `json:"code, omitempty"`
 	Message string `json:"message, omitempty"`
 }
+
+type HealthData struct {
+	Token       string    `json:"token"`
+	FitDataList []FitData `json:"fitDataList"`
+}
+
+type FitData struct {
+	Value int `json:"value"`
+	DateFrom string `json:"dateFrom"`
+	DateTo string `json:"dateTo"`
+	Source string `json:"source"`
+	UserEntered bool `json:"userEntered"`
+}
